@@ -10,7 +10,7 @@
   // --- Configuration ---
   const TOTAL_FRAMES = 192;
   const FRAME_PREFIX = 'sunglasses_video_frames/frame_';
-  const FRAME_EXTENSION = '.png';
+  const FRAME_EXTENSION = '.jpg';
   const LERP_FACTOR = 0.12;
 
   // --- DOM Elements ---
@@ -198,76 +198,146 @@
     requestAnimationFrame(animationLoop);
   }
 
-  // --- High-Concurrency Preload Pipeline ---
+  // --- Progressive Fast-Track Preload & Dynamic Streaming ---
   function startPreloading() {
+    // 1. Critical first frame (Hero background) - load immediately
     const firstImg = new Image();
     firstImg.src = getFramePath(1);
-    firstImg.onload = () => {
+
+    const onFirstFrame = () => {
       frames[0] = firstImg;
       frameLoaded[0] = true;
       loadedCount++;
       drawFrame(0, true);
 
-      loadRemainingFrames();
+      initProgressiveStreaming();
     };
 
-    function loadRemainingFrames() {
-      const queue = [];
+    if (firstImg.complete && firstImg.naturalWidth !== 0) {
+      onFirstFrame();
+    } else {
+      firstImg.onload = onFirstFrame;
+      firstImg.onerror = () => {
+        initProgressiveStreaming();
+      };
+    }
+
+    function initProgressiveStreaming() {
+      // Step A: Keyframes fast-track (initial 6 frames + every 8th anchor frame)
+      // Gives instant scroll responsiveness in ~300ms while loading ~1MB total
+      const keyframeSet = new Set();
+      for (let i = 0; i < Math.min(6, TOTAL_FRAMES); i++) keyframeSet.add(i);
+      for (let i = 0; i < TOTAL_FRAMES; i += 8) keyframeSet.add(i);
+      keyframeSet.add(TOTAL_FRAMES - 1);
+
+      const keyframes = Array.from(keyframeSet);
+      let keyframesLoaded = 0;
+      const totalKeyframes = keyframes.length;
       const enqueued = new Set([0]);
 
-      // Step 1: Every 4th frame
-      for (let i = 0; i < TOTAL_FRAMES; i += 4) {
-        if (!enqueued.has(i)) { queue.push(i); enqueued.add(i); }
-      }
-      // Step 2: Every 2nd frame
-      for (let i = 0; i < TOTAL_FRAMES; i += 2) {
-        if (!enqueued.has(i)) { queue.push(i); enqueued.add(i); }
-      }
-      // Step 3: All remaining frames
-      for (let i = 0; i < TOTAL_FRAMES; i++) {
-        if (!enqueued.has(i)) { queue.push(i); enqueued.add(i); }
-      }
-
-      const CONCURRENCY = 16;
-      let qIndex = 0;
-
-      function spawnWorker() {
-        if (qIndex >= queue.length) return;
-
-        const frameIdx = queue[qIndex++];
+      function loadFrame(idx, onComplete) {
+        if (frameLoaded[idx]) {
+          if (onComplete) onComplete();
+          return;
+        }
         const img = new Image();
-        img.src = getFramePath(frameIdx + 1);
-
+        img.src = getFramePath(idx + 1);
         img.onload = () => {
-          frames[frameIdx] = img;
-          frameLoaded[frameIdx] = true;
+          frames[idx] = img;
+          frameLoaded[idx] = true;
           loadedCount++;
-
-          if (frameIdx === currentTargetIndex) {
+          if (idx === currentTargetIndex) {
             drawFrame(currentTargetIndex, true);
           }
-
-          const pct = Math.round((loadedCount / TOTAL_FRAMES) * 100);
-          preloadBarFill.style.width = pct + '%';
-          preloadText.textContent = `Loading ${pct}%`;
-
-          if (loadedCount >= TOTAL_FRAMES) {
-            preloadText.textContent = 'Ready (100%)';
-            setTimeout(() => {
-              preloadPill.classList.add('loaded');
-            }, 800);
-          }
-
-          spawnWorker();
+          if (onComplete) onComplete();
         };
-
         img.onerror = () => {
-          spawnWorker();
+          if (onComplete) onComplete();
         };
       }
 
-      for (let w = 0; w < CONCURRENCY; w++) {
-        spawnWorker();
+      // Fast-track keyframes with controlled concurrency (4 parallel downloads)
+      let kIndex = 0;
+      const KEYFRAME_CONCURRENCY = 4;
+
+      function spawnKeyframeWorker() {
+        if (kIndex >= keyframes.length) return;
+        const idx = keyframes[kIndex++];
+        enqueued.add(idx);
+
+        loadFrame(idx, () => {
+          keyframesLoaded++;
+          const pct = Math.min(100, Math.round((keyframesLoaded / totalKeyframes) * 100));
+          if (preloadBarFill) preloadBarFill.style.width = pct + '%';
+          if (preloadText) preloadText.textContent = `Ready (${pct}%)`;
+
+          // When keyframes finish, dismiss loading pill immediately and start streaming
+          if (keyframesLoaded >= totalKeyframes) {
+            if (preloadText) preloadText.textContent = 'Ready (100%)';
+            if (preloadBarFill) preloadBarFill.style.width = '100%';
+            setTimeout(() => {
+              if (preloadPill) preloadPill.classList.add('loaded');
+            }, 300);
+
+            startBackgroundStream();
+          } else {
+            spawnKeyframeWorker();
+          }
+        });
+      }
+
+      for (let w = 0; w < KEYFRAME_CONCURRENCY; w++) {
+        spawnKeyframeWorker();
+      }
+
+      // Step B: Smart background streaming with distance-to-scroll prioritization
+      function startBackgroundStream() {
+        const remainingQueue = [];
+        for (let i = 0; i < TOTAL_FRAMES; i++) {
+          if (!enqueued.has(i)) {
+            remainingQueue.push(i);
+            enqueued.add(i);
+          }
+        }
+
+        const BG_CONCURRENCY = 3;
+        let activeBgWorkers = 0;
+
+        function getNextPriorityFrame() {
+          if (remainingQueue.length === 0) return null;
+          // Prioritize frames closest to user's current scroll viewport
+          let bestIdx = 0;
+          let minDistance = Infinity;
+          for (let i = 0; i < remainingQueue.length; i++) {
+            const dist = Math.abs(remainingQueue[i] - currentTargetIndex);
+            if (dist < minDistance) {
+              minDistance = dist;
+              bestIdx = i;
+            }
+          }
+          return remainingQueue.splice(bestIdx, 1)[0];
+        }
+
+        function pumpBgWorker() {
+          while (activeBgWorkers < BG_CONCURRENCY && remainingQueue.length > 0) {
+            const nextFrame = getNextPriorityFrame();
+            if (nextFrame === null || nextFrame === undefined) break;
+
+            activeBgWorkers++;
+            loadFrame(nextFrame, () => {
+              activeBgWorkers--;
+              if (remainingQueue.length > 0) {
+                if ('requestIdleCallback' in window) {
+                  requestIdleCallback(() => pumpBgWorker(), { timeout: 120 });
+                } else {
+                  setTimeout(pumpBgWorker, 16);
+                }
+              }
+            });
+          }
+        }
+
+        pumpBgWorker();
       }
     }
   }
