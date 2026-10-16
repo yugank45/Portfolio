@@ -12,6 +12,7 @@ desktop.ini
 # Local dev scripts / background logs if any
 run_server.ps1
 start-server.bat
+build_favicons.ps1
 
 # IDE and Editor directories
 .vscode/
