@@ -1,0 +1,20 @@
+# Large archives (exceeds GitHub 100MB limit and not needed in deployment)
+*.zip
+*.tar.gz
+*.rar
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# Local dev scripts / background logs if any
+run_server.ps1
+start-server.bat
+
+# IDE and Editor directories
+.vscode/
+.idea/
+.gemini/
+.agents/
