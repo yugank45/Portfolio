@@ -501,7 +501,7 @@
     const atsResumeText = `YUGANK SINGH
 Aspiring Software Engineer — Full Stack Developer
 Phone: +91-9356920426 | Email: yugankyogeshsingh2020@gmail.com
-LinkedIn: https://www.linkedin.com/in/yugank-singh | GitHub: https://github.com/yugank45
+LinkedIn: https://www.linkedin.com/in/yuganksingh20 | GitHub: https://github.com/yugank45
 
 SUMMARY
 Full-Stack Software Engineer with production experience across modern JavaScript/TypeScript, React.js, Node.js, and Java backend architectures. Proven capability architecting resilient microservices, sub-second multimodal AI vision pipelines, and atomic transaction ledgers — strengthened by hands-on fintech workflow and administrative panel engineering at BlackOriginX (Torkk).
