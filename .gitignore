@@ -13,6 +13,7 @@ desktop.ini
 run_server.ps1
 start-server.bat
 build_favicons.ps1
+deploy.bat
 
 # IDE and Editor directories
 .vscode/

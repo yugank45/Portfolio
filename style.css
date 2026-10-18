@@ -24,6 +24,11 @@
   --radius-md: 14px;
   --radius-lg: 24px;
   --radius-xl: 32px;
+
+  /* Robust Typography Fallback System */
+  --font-primary: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
 * {
@@ -45,7 +50,7 @@ body {
   min-height: 100%;
   background-color: var(--bg-color);
   color: var(--text-white);
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-primary);
   overflow-x: hidden;
   overflow-y: auto;
   position: relative;
@@ -391,7 +396,7 @@ body {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-bottom: 12px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
 }
 
 .section-heading {
@@ -632,7 +637,7 @@ body {
   color: var(--accent-orange);
   letter-spacing: 0.15em;
   margin-bottom: 12px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
   transform: translateZ(18px);
 }
 
@@ -810,7 +815,7 @@ body {
 }
 
 .highlight-number {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
   font-size: 14px;
   font-weight: 800;
   color: var(--accent-orange);
@@ -1138,7 +1143,7 @@ body {
   color: #ffffff;
   font-size: 13px;
   font-weight: 700;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
   letter-spacing: 0.04em;
   box-shadow: 0 8px 24px var(--accent-orange-glow);
   transform: translateZ(48px) translateY(8px);
@@ -1174,12 +1179,12 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--accent-orange);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
 }
 
 .project-date {
   font-size: 11.5px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--text-dim);
 }
 
@@ -1194,7 +1199,7 @@ body {
   border: 1px solid rgba(255, 170, 0, 0.45);
   color: #fbbf24;
   letter-spacing: 0.02em;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
 }
 
 @keyframes cyberScanSweep {
@@ -1304,7 +1309,7 @@ body {
 
 .project-tech-tags span {
   font-size: 11.5px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   padding: 4px 10px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-glass);
@@ -1423,7 +1428,7 @@ body {
 
 .contrib-tags span {
   font-size: 11.5px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   padding: 4px 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-glass);
@@ -1526,7 +1531,7 @@ body {
 
 .exp-period {
   font-size: 12px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
   padding: 4px 12px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border-glass);
@@ -1567,7 +1572,7 @@ body {
 
 .exp-tech-tags span {
   font-size: 11.5px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   padding: 4px 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-glass);
@@ -1625,7 +1630,7 @@ body {
   font-weight: 700;
   letter-spacing: -0.01em;
   color: #FFFFFF;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
 }
 
 .achievements-grid {
@@ -1680,7 +1685,7 @@ body {
   color: var(--accent-orange);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
   margin-bottom: 5px;
 }
 
@@ -1783,7 +1788,7 @@ body {
   font-weight: 700;
   color: var(--accent-orange);
   letter-spacing: 0.12em;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
 }
 
 .channel-value {
@@ -1949,7 +1954,7 @@ body {
   font-weight: 700;
   color: rgba(255, 255, 255, 0.65);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
 }
 
 .preload-pill,
@@ -2068,7 +2073,7 @@ body {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-muted);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
 }
 
 .resume-status-pill .status-dot {
@@ -2101,7 +2106,7 @@ body {
   border: 1px solid var(--border-glass-light);
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-white);
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-primary);
 }
 
 .btn-resume-action:hover {
@@ -2182,7 +2187,7 @@ body {
   margin-bottom: 24px;
   padding-bottom: 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
 }
@@ -2242,7 +2247,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.02em;
   color: #ffffff;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
   margin-bottom: 6px;
 }
 
@@ -2349,7 +2354,7 @@ body {
 }
 
 .stat-numeral {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
   font-size: 15px;
   font-weight: 800;
   color: var(--accent-orange);
@@ -2369,7 +2374,7 @@ body {
   letter-spacing: 0.12em;
   color: var(--accent-orange);
   margin-bottom: 4px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
 }
 
 .stat-highlight {
@@ -2411,12 +2416,12 @@ body {
   letter-spacing: 0.08em;
   color: var(--text-muted);
   margin-right: 4px;
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: var(--font-display);
 }
 
 .summary-stack-chips .chip {
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   padding: 3px 9px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-glass);

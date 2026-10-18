@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /sunglasses_video_frames/frame_0001.jpg
+Disallow: /sunglasses_video_frames/frame_*.jpg$
+Disallow: /*.zip$
+Disallow: /*.bat$
+Disallow: /*.ps1$
+
+Sitemap: https://yuganksingh.me/sitemap.xml

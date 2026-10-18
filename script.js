@@ -200,6 +200,11 @@
 
   // --- Progressive Fast-Track Preload & Dynamic Streaming ---
   function startPreloading() {
+    // Detect search crawlers, bots, and headless indexing agents
+    const isSearchBot = /bot|googlebot|crawler|spider|robot|crawling|slurp|lighthouse|headlesschrome/i.test(
+      (navigator && navigator.userAgent) || ''
+    );
+
     // 1. Critical first frame (Hero background) - load immediately
     const firstImg = new Image();
     firstImg.src = getFramePath(1);
@@ -210,7 +215,13 @@
       loadedCount++;
       drawFrame(0, true);
 
-      initProgressiveStreaming();
+      // Search bots only require the hero frame to index and render.
+      // Skipping remaining frames preserves crawl budget and prevents 150+ connection timeouts.
+      if (isSearchBot) {
+        return;
+      }
+
+      setupDeferredStreaming();
     };
 
     if (firstImg.complete && firstImg.naturalWidth !== 0) {
@@ -218,16 +229,77 @@
     } else {
       firstImg.onload = onFirstFrame;
       firstImg.onerror = () => {
-        initProgressiveStreaming();
+        if (!isSearchBot) {
+          setupDeferredStreaming();
+        }
       };
     }
 
+    let streamingInitiated = false;
+    let idleTimer = null;
+    const passiveOpts = { passive: true, once: true };
+    const interactionEvents = ['scroll', 'wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'];
+
+    function triggerStreaming() {
+      if (streamingInitiated || isSearchBot) return;
+      streamingInitiated = true;
+
+      // Clean up interaction listeners and idle timer
+      interactionEvents.forEach((evt) => {
+        window.removeEventListener(evt, triggerStreaming, passiveOpts);
+      });
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+
+      initProgressiveStreaming();
+    }
+
+    function setupDeferredStreaming() {
+      // If user has already scrolled past top (e.g. page reload or anchor link), stream immediately
+      const initialScroll = window.pageYOffset || document.documentElement.scrollTop || 0;
+      if (initialScroll > 10) {
+        triggerStreaming();
+        return;
+      }
+
+      // Defer stream until user initiates scroll or interaction
+      interactionEvents.forEach((evt) => {
+        window.addEventListener(evt, triggerStreaming, passiveOpts);
+      });
+
+      // Data-saver / metered connection detection
+      const isDataSaver = Boolean(
+        navigator.connection &&
+        (navigator.connection.saveData || /2g/.test(navigator.connection.effectiveType || ''))
+      );
+
+      // Gracefully warm up keyframes after 3.5 seconds of idle time on desktop/high-speed connections
+      if (!isDataSaver) {
+        if ('requestIdleCallback' in window) {
+          idleTimer = setTimeout(() => {
+            window.requestIdleCallback(() => triggerStreaming(), { timeout: 2000 });
+          }, 3500);
+        } else {
+          idleTimer = setTimeout(triggerStreaming, 4000);
+        }
+      }
+    }
+
     function initProgressiveStreaming() {
-      // Step A: Keyframes fast-track (initial 6 frames + every 8th anchor frame)
-      // Gives instant scroll responsiveness in ~300ms while loading ~1MB total
+      // Step A: Keyframes fast-track
+      // Gives instant scroll responsiveness while loading only key anchor frames
+      const isLowBandwidth = Boolean(
+        navigator.connection &&
+        (navigator.connection.saveData || /2g/.test(navigator.connection.effectiveType || ''))
+      );
+
+      // Keyframes: initial 6 frames + every 8th (or 16th on slow connections) anchor frame
+      const step = isLowBandwidth ? 16 : 8;
       const keyframeSet = new Set();
       for (let i = 0; i < Math.min(6, TOTAL_FRAMES); i++) keyframeSet.add(i);
-      for (let i = 0; i < TOTAL_FRAMES; i += 8) keyframeSet.add(i);
+      for (let i = 0; i < TOTAL_FRAMES; i += step) keyframeSet.add(i);
       keyframeSet.add(TOTAL_FRAMES - 1);
 
       const keyframes = Array.from(keyframeSet);
@@ -256,9 +328,9 @@
         };
       }
 
-      // Fast-track keyframes with controlled concurrency (4 parallel downloads)
+      // Fast-track keyframes with controlled concurrency (2-3 parallel downloads max)
       let kIndex = 0;
-      const KEYFRAME_CONCURRENCY = 4;
+      const KEYFRAME_CONCURRENCY = isLowBandwidth ? 2 : 3;
 
       function spawnKeyframeWorker() {
         if (kIndex >= keyframes.length) return;
@@ -271,7 +343,7 @@
           if (preloadBarFill) preloadBarFill.style.width = pct + '%';
           if (preloadText) preloadText.textContent = `Ready (${pct}%)`;
 
-          // When keyframes finish, dismiss loading pill immediately and start streaming
+          // When keyframes finish, dismiss loading pill and start streaming
           if (keyframesLoaded >= totalKeyframes) {
             if (preloadText) preloadText.textContent = 'Ready (100%)';
             if (preloadBarFill) preloadBarFill.style.width = '100%';
@@ -279,7 +351,10 @@
               if (preloadPill) preloadPill.classList.add('loaded');
             }, 300);
 
-            startBackgroundStream();
+            // On data saver, keep keyframes only to save users hundreds of megabytes
+            if (!isLowBandwidth) {
+              startBackgroundStream();
+            }
           } else {
             spawnKeyframeWorker();
           }
@@ -300,7 +375,7 @@
           }
         }
 
-        const BG_CONCURRENCY = 3;
+        const BG_CONCURRENCY = 2;
         let activeBgWorkers = 0;
 
         function getNextPriorityFrame() {
@@ -330,7 +405,7 @@
                 if ('requestIdleCallback' in window) {
                   requestIdleCallback(() => pumpBgWorker(), { timeout: 120 });
                 } else {
-                  setTimeout(pumpBgWorker, 16);
+                  setTimeout(pumpBgWorker, 24);
                 }
               }
             });
