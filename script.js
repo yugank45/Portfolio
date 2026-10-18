@@ -205,6 +205,59 @@
       (navigator && navigator.userAgent) || ''
     );
 
+    // State & flags defined first to avoid TDZ if firstImg is cached synchronously
+    let streamingInitiated = false;
+    let idleTimer = null;
+    const passiveOpts = { passive: true, once: true };
+    const interactionEvents = ['scroll', 'wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'];
+
+    function triggerStreaming() {
+      if (streamingInitiated || isSearchBot) return;
+      streamingInitiated = true;
+
+      // Clean up interaction listeners and idle timer
+      interactionEvents.forEach((evt) => {
+        window.removeEventListener(evt, triggerStreaming, passiveOpts);
+      });
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+
+      initProgressiveStreaming();
+    }
+
+    function setupDeferredStreaming() {
+      // If user has already scrolled past top (e.g. reload or anchor link #resume), stream immediately
+      const initialScroll = window.pageYOffset || document.documentElement.scrollTop || 0;
+      if (initialScroll > 10) {
+        triggerStreaming();
+        return;
+      }
+
+      // Defer stream until user initiates scroll or interaction
+      interactionEvents.forEach((evt) => {
+        window.addEventListener(evt, triggerStreaming, passiveOpts);
+      });
+
+      // Data-saver / metered connection detection
+      const isDataSaver = Boolean(
+        navigator.connection &&
+        (navigator.connection.saveData || /2g/.test(navigator.connection.effectiveType || ''))
+      );
+
+      // Gracefully warm up keyframes after 3.5 seconds of idle time on desktop/high-speed connections
+      if (!isDataSaver) {
+        if ('requestIdleCallback' in window) {
+          idleTimer = setTimeout(() => {
+            window.requestIdleCallback(() => triggerStreaming(), { timeout: 2000 });
+          }, 3500);
+        } else {
+          idleTimer = setTimeout(triggerStreaming, 4000);
+        }
+      }
+    }
+
     // 1. Critical first frame (Hero background) - load immediately
     const firstImg = new Image();
     firstImg.src = getFramePath(1);
@@ -233,58 +286,6 @@
           setupDeferredStreaming();
         }
       };
-    }
-
-    let streamingInitiated = false;
-    let idleTimer = null;
-    const passiveOpts = { passive: true, once: true };
-    const interactionEvents = ['scroll', 'wheel', 'touchstart', 'touchmove', 'pointerdown', 'keydown'];
-
-    function triggerStreaming() {
-      if (streamingInitiated || isSearchBot) return;
-      streamingInitiated = true;
-
-      // Clean up interaction listeners and idle timer
-      interactionEvents.forEach((evt) => {
-        window.removeEventListener(evt, triggerStreaming, passiveOpts);
-      });
-      if (idleTimer) {
-        clearTimeout(idleTimer);
-        idleTimer = null;
-      }
-
-      initProgressiveStreaming();
-    }
-
-    function setupDeferredStreaming() {
-      // If user has already scrolled past top (e.g. page reload or anchor link), stream immediately
-      const initialScroll = window.pageYOffset || document.documentElement.scrollTop || 0;
-      if (initialScroll > 10) {
-        triggerStreaming();
-        return;
-      }
-
-      // Defer stream until user initiates scroll or interaction
-      interactionEvents.forEach((evt) => {
-        window.addEventListener(evt, triggerStreaming, passiveOpts);
-      });
-
-      // Data-saver / metered connection detection
-      const isDataSaver = Boolean(
-        navigator.connection &&
-        (navigator.connection.saveData || /2g/.test(navigator.connection.effectiveType || ''))
-      );
-
-      // Gracefully warm up keyframes after 3.5 seconds of idle time on desktop/high-speed connections
-      if (!isDataSaver) {
-        if ('requestIdleCallback' in window) {
-          idleTimer = setTimeout(() => {
-            window.requestIdleCallback(() => triggerStreaming(), { timeout: 2000 });
-          }, 3500);
-        } else {
-          idleTimer = setTimeout(triggerStreaming, 4000);
-        }
-      }
     }
 
     function initProgressiveStreaming() {
